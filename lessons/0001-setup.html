@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 1 — Setup &amp; Your First Scala Run</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main class="lesson">
+
+  <p class="course-label">FP in Scala · Lesson 1</p>
+  <h1>Setup &amp; your first Scala run</h1>
+  <p class="lesson-meta">One tool. One file. Then IntelliJ. ~30&nbsp;minutes.</p>
+
+  <p>
+    Our whole toolchain is deliberately tiny: <strong>one command-line tool</strong>
+    (<a href="https://scala-cli.virtuslab.org/">Scala&nbsp;CLI</a>) and
+    <strong>one editor</strong> (IntelliJ IDEA). That's it — no separate JDK to
+    install, no build tool, no frameworks. This keeps the inner workings visible,
+    which is exactly what our
+    <a href="../MISSION.md">mission</a> asks for.
+  </p>
+
+  <div class="callout">
+    <span class="label">Why Scala CLI</span>
+    <p>
+      Since Scala&nbsp;3.5.0, Scala&nbsp;CLI <em>is</em> the official <code>scala</code>
+      runner. It downloads and manages the Java runtime and the Scala compiler
+      <em>for you</em> the first time you run something — so "install Java" and
+      "install Scala" collapse into a single step.
+      <a class="cite" href="https://scala-cli.virtuslab.org/docs/under-the-hood/">[docs: under the hood]</a>
+    </p>
+  </div>
+
+  <h2>Part A — Command line first (the fast win)</h2>
+
+  <div class="step">
+    <span class="step-num">1</span>
+    <h3>Install Scala CLI</h3>
+    <p>Open <span class="ui">PowerShell</span> and run:</p>
+    <pre><code>winget install virtuslab.scalacli</code></pre>
+    <p>
+      Close and reopen PowerShell afterwards so the new <code>scala-cli</code>
+      command is on your <code>PATH</code>. Then confirm it's there:
+    </p>
+    <pre><code>scala-cli version</code></pre>
+    <p>You should see a version number print. If you do, the tool is installed.</p>
+    <div class="callout warn">
+      <span class="label">If winget isn't available</span>
+      <p>
+        Download the MSI installer from the
+        <a href="https://github.com/VirtusLab/scala-cli/releases">Scala CLI releases page</a>
+        instead. On a bare Windows machine you may also need the
+        <a href="https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist">Visual C++ redistributable</a>.
+        Tell me if <code>scala-cli version</code> errors and we'll debug it together.
+      </p>
+    </div>
+  </div>
+
+  <div class="step">
+    <span class="step-num">2</span>
+    <h3>Write a hello-world file</h3>
+    <p>
+      Create a file called <code>hello.scala</code> in your project folder
+      (<code>F:\Programmering\Projects\learn-scala</code>) with exactly this:
+    </p>
+<pre><code><span class="c-key">@main</span> <span class="c-key">def</span> hello() =
+  <span class="c-key">val</span> who = <span class="c-str">"dice roller"</span>
+  println(<span class="c-str">s"Hello, </span>${who}<span class="c-str">! Scala is running."</span>)</code></pre>
+    <p>A few things to notice — we'll unpack all of these in later lessons:</p>
+    <ul>
+      <li><code>@main</code> marks the program's entry point (like <code>static void Main</code> in C#).</li>
+      <li><code>val</code> is an <strong>immutable</strong> binding — once set, <code>who</code> can't be reassigned. This is the FP default, and it's the first habit we'll build.</li>
+      <li>Indentation defines the block — Scala&nbsp;3 needs no curly braces here.</li>
+      <li><code>s"...${who}..."</code> is an interpolated string, like C#'s <code>$"...{who}..."</code>.</li>
+    </ul>
+  </div>
+
+  <div class="step">
+    <span class="step-num">3</span>
+    <h3>Run it</h3>
+    <p>From the same folder, in PowerShell:</p>
+    <pre><code>scala-cli run hello.scala</code></pre>
+    <p>
+      <strong>The first run will be slow</strong> — and that's the interesting part.
+      Watch the output: Scala CLI is downloading a Java runtime and the Scala
+      compiler, then compiling your file. Later runs reuse them and are fast.
+      When it finishes you should see:
+    </p>
+    <pre><code>Hello, dice roller! Scala is running.</code></pre>
+    <div class="callout win">
+      <span class="label">Milestone</span>
+      <p>You just compiled and ran Scala from nothing but one installed tool. This is the whole toolchain — everything else we build sits on top of this.</p>
+    </div>
+  </div>
+
+  <h2>Part B — Bring in IntelliJ</h2>
+
+  <p>
+    The command line proves the toolchain works; IntelliJ gives you
+    autocomplete, red squiggles, and one-click running while you learn.
+  </p>
+
+  <div class="step">
+    <span class="step-num">4</span>
+    <h3>Install IntelliJ IDEA + the Scala plugin</h3>
+    <ul>
+      <li>Install <strong>IntelliJ IDEA Community Edition</strong> (free) from
+        <a href="https://www.jetbrains.com/idea/download/">jetbrains.com/idea/download</a>
+        — the Community build is enough for everything we'll do.</li>
+      <li>On first launch, go to
+        <span class="ui">Settings → Plugins → Marketplace</span>, search
+        <strong>Scala</strong>, install the JetBrains Scala plugin, and restart when prompted.</li>
+    </ul>
+  </div>
+
+  <div class="step">
+    <span class="step-num">5</span>
+    <h3>Open the project via BSP</h3>
+    <p>
+      In PowerShell, from your project folder, generate the IDE config once:
+    </p>
+    <pre><code>scala-cli setup-ide .</code></pre>
+    <p>
+      Then in IntelliJ: <span class="ui">File → Open</span>, select the
+      <code>learn-scala</code> folder, and if asked how to import it choose
+      <strong>BSP</strong>. IntelliJ will use Scala CLI itself to compile and run —
+      the IDE and the command line stay perfectly in sync.
+      <a class="cite" href="https://www.jetbrains.com/help/idea/scalacli.html">[JetBrains: Scala CLI in IntelliJ]</a>
+    </p>
+    <div class="callout">
+      <span class="label">If it asks for a Project SDK</span>
+      <p>
+        Pick <span class="ui">Download JDK</span> in the SDK dropdown and choose a
+        recent LTS (e.g. <strong>21</strong>). Let IntelliJ fetch it — still no
+        manual JDK juggling.
+      </p>
+    </div>
+  </div>
+
+  <div class="step">
+    <span class="step-num">6</span>
+    <h3>Run hello-world from inside IntelliJ</h3>
+    <p>
+      Open <code>hello.scala</code>. A green <strong>▶ Run</strong> arrow appears in
+      the gutter next to <code>@main def hello()</code>. Click it. The same greeting
+      should print in IntelliJ's Run panel.
+    </p>
+    <div class="callout win">
+      <span class="label">Milestone</span>
+      <p>You now have a working, minimal Scala 3 environment and can run code two ways: terminal and IDE. Setup is done — from here on it's all functional programming.</p>
+    </div>
+  </div>
+
+  <div class="primary-source">
+    <span class="label">Read next (primary source)</span>
+    <p>
+      Skim the opening of the free
+      <a href="https://docs.scala-lang.org/scala3/book/introduction.html">Scala&nbsp;3 Book</a>
+      — just the <em>Introduction</em> and <em>A Taste of Scala</em>. Don't try to
+      absorb it; just let the shape of the language wash over you. We'll teach each
+      piece deliberately.
+    </p>
+  </div>
+
+  <p>See also the <a href="../reference/scala-cli-quickref.html">Scala&nbsp;CLI quick reference</a> for the handful of commands you'll actually use.</p>
+
+  <div class="ask-teacher">
+    <strong>I'm your teacher — ask me anything.</strong> If any command errors, a
+    step looks different on your screen, or a term (<code>val</code>, <code>@main</code>,
+    BSP) is fuzzy, just ask. Getting unstuck fast is the whole point of having me here.
+  </div>
+
+  <nav class="lesson-nav">
+    <span class="disabled">← (start)</span>
+    <a href="0002-modelling-a-monster.html">Next: Modelling a monster with immutable data →</a>
+  </nav>
+
+</main>
+</body>
+</html>

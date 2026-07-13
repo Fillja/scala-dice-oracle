@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 4 — Pattern Matching on Outcomes</title>
+  <link rel="stylesheet" href="../assets/course.css">
+  <script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+<main class="lesson">
+
+  <p class="course-label">FP in Scala · Lesson 4</p>
+  <h1>Pattern matching on outcomes</h1>
+  <p class="lesson-meta">From a modelled choice to a spoken result — and the compiler has your back. ~20&nbsp;minutes.</p>
+
+  <p>
+    Last lesson you <a href="0003-hit-or-miss-with-enum.html">modelled a choice</a>: an
+    <code>AttackResult</code> is a <code>Hit</code>, a <code>Miss</code>, or a
+    <code>Critical</code> — a <strong>sum type</strong>. But so far all you can do with one
+    is print it. Today you'll <em>take it apart</em>: look at which case a value is, pull out
+    its data, and turn it into a line of combat narration. The tool is <code>match</code>, and
+    it pays back the promise Lesson&nbsp;3 made — the compiler will check you've handled every
+    case.
+  </p>
+
+  <h2>The tool: <code>match</code></h2>
+
+  <p>
+    You give <code>match</code> a value and a list of <strong>cases</strong>. It finds the
+    first case that fits and produces that case's result:
+  </p>
+
+<pre><code><span class="c-key">def</span> narrate(result: AttackResult): String =
+  result <span class="c-key">match</span>
+    <span class="c-key">case</span> AttackResult.Hit(dmg)      =&gt; <span class="c-str">s"A solid hit for </span>$dmg<span class="c-str"> damage."</span>
+    <span class="c-key">case</span> AttackResult.Critical(dmg) =&gt; <span class="c-str">s"CRITICAL — </span>$dmg<span class="c-str"> damage!"</span>
+    <span class="c-key">case</span> AttackResult.Miss          =&gt; <span class="c-str">"A clean miss."</span></code></pre>
+
+  <p>
+    Two things are happening at once. First, each <code>case</code> tests <em>which</em>
+    alternative the value is. Second — and this is the part you couldn't do before —
+    <code>Hit(dmg)</code> <strong>binds</strong> the payload: the name <code>dmg</code> is a
+    fresh <code>val</code> holding the number inside that <code>Hit</code>, ready to use on the
+    right of the <code>=&gt;</code>. That's how you finally read the data a case carries.
+    <a class="cite" href="https://docs.scala-lang.org/scala3/book/control-structures.html#match-expressions">[Scala 3 Book: match]</a>
+  </p>
+
+  <div class="callout">
+    <span class="label">The big idea: match is an <em>expression</em></span>
+    <p>
+      A C# <code>switch</code> <em>statement</em> just runs branches — it does something. A
+      Scala <code>match</code> <strong>returns a value</strong>: the whole
+      <code>result match …</code> evaluates <em>to</em> the string, which is why we can hand it
+      straight back as the function's result. (C#'s newer <code>switch</code>
+      <em>expression</em> works the same way — if you've used it, you already have the mental
+      model.) "Everything returns a value" is a drumbeat you'll hear all through FP.
+    </p>
+  </div>
+
+  <h2>The payoff: exhaustiveness</h2>
+
+  <p>
+    Because an <code>enum</code> has a <strong>fixed, finite</strong> list of cases, the
+    compiler knows the complete set. If your <code>match</code> forgets one, it tells you —
+    <em>before the program ever runs</em>. This is the safety net Lesson&nbsp;3 promised, and
+    you're about to trip it on purpose.
+  </p>
+
+  <h2>Do it</h2>
+
+  <div class="step">
+    <span class="step-num">1</span>
+    <h3>Add <code>narrate</code> and use it</h3>
+    <p>Open your <code>attacks.scala</code> from last lesson. Keep the <code>enum</code>, and
+       replace the body of <code>combat()</code> so the file reads:</p>
+<pre><code><span class="c-key">enum</span> AttackResult:
+  <span class="c-key">case</span> Hit(damage: Int)
+  <span class="c-key">case</span> Critical(damage: Int)
+  <span class="c-key">case</span> Miss
+
+<span class="c-key">def</span> narrate(result: AttackResult): String =
+  result <span class="c-key">match</span>
+    <span class="c-key">case</span> AttackResult.Hit(dmg)      =&gt; <span class="c-str">s"A solid hit for </span>$dmg<span class="c-str"> damage."</span>
+    <span class="c-key">case</span> AttackResult.Critical(dmg) =&gt; <span class="c-str">s"CRITICAL — </span>$dmg<span class="c-str"> damage!"</span>
+    <span class="c-key">case</span> AttackResult.Miss          =&gt; <span class="c-str">"A clean miss."</span>
+
+<span class="c-key">@main</span> <span class="c-key">def</span> combat() =
+  <span class="c-key">val</span> log = List(
+    AttackResult.Hit(<span class="c-lit">6</span>),
+    AttackResult.Miss,
+    AttackResult.Critical(<span class="c-lit">12</span>),
+    AttackResult.Hit(<span class="c-lit">3</span>)
+  )
+  log.foreach(r =&gt; println(narrate(r)))</code></pre>
+    <p><code>foreach</code> runs the little function <code>r =&gt; println(narrate(r))</code>
+       once per element — the same <code>x =&gt; …</code> lambda shape you saw with
+       <code>find</code> in the reference.</p>
+  </div>
+
+  <div class="step">
+    <span class="step-num">2</span>
+    <h3>Run it</h3>
+    <pre><code>scala-cli run attacks.scala</code></pre>
+    <p>Each outcome comes out as a sentence — the <code>match</code> turned data into words:</p>
+<pre><code>A solid hit for 6 damage.
+A clean miss.
+CRITICAL — 12 damage!
+A solid hit for 3 damage.</code></pre>
+  </div>
+
+  <div class="step">
+    <span class="step-num">3</span>
+    <h3>Break it on purpose (the win)</h3>
+    <p>
+      Now <strong>delete the <code>Miss</code> line</strong> from <code>narrate</code> — leave
+      only <code>Hit</code> and <code>Critical</code> — and run again. The program still tries
+      to compile, but Scala stops you with a warning like:
+    </p>
+<pre><code><span class="c-com">[warn] match may not be exhaustive.</span>
+<span class="c-com">[warn] It would fail on pattern case: AttackResult.Miss</span></code></pre>
+    <p>
+      Read that as: <em>"you claim to handle every outcome, but a <code>Miss</code> could slip
+      through."</em> The compiler enumerated your <code>enum</code>, compared it against your
+      cases, and found the gap — at <strong>compile time</strong>, before a single attack was
+      rolled. (If a <code>Miss</code> did reach that match at runtime, you'd get a
+      <code>MatchError</code> — but you were warned long before.)
+    </p>
+    <div class="callout win">
+      <span class="label">Milestone</span>
+      <p>
+        Put the <code>Miss</code> case back. You've now closed the loop: model a choice as a
+        sum type, and the compiler <em>guarantees</em> you consider every case whenever you
+        act on it. That guarantee is exactly what makes the next step — a
+        <strong>pure function</strong> that resolves an attack — safe to build.
+      </p>
+    </div>
+  </div>
+
+  <h2>Check yourself</h2>
+
+  <div class="quiz">
+    <span class="quiz-label">Retrieval practice</span>
+    <p class="quiz-intro">
+      From memory — no scrolling up. A wrong answer just invites another try.
+    </p>
+
+    <div class="q" data-answer="1"
+         data-explain="A match is an expression: the whole thing evaluates to a value, which is why narrate can return it.">
+      <p class="q-text">A Scala <code>match</code> differs from a C# <code>switch</code> statement because it…</p>
+      <button class="opt">mutates a value</button>
+      <button class="opt">returns a value</button>
+      <button class="opt">ignores a value</button>
+      <p class="q-fb" hidden></p>
+    </div>
+
+    <div class="q" data-answer="2"
+         data-explain="Because the enum's cases are fixed and known, a missing case is caught at compile time.">
+      <p class="q-text">Delete the <code>Miss</code> case from a complete match and the compiler…</p>
+      <button class="opt">crashes at first call</button>
+      <button class="opt">guesses the last case</button>
+      <button class="opt">warns at compile time</button>
+      <p class="q-fb" hidden></p>
+    </div>
+
+    <div class="q" data-answer="0"
+         data-explain="Hit(dmg) binds the payload: dmg becomes a val holding the number inside that Hit.">
+      <p class="q-text">In <code>case Hit(dmg) =&gt;</code>, the name <code>dmg</code>…</p>
+      <button class="opt">binds the payload</button>
+      <button class="opt">names the payload</button>
+      <button class="opt">hides the payload</button>
+      <p class="q-fb" hidden></p>
+    </div>
+
+    <div class="q" data-answer="1"
+         data-explain="Add a case to the enum and every exhaustive match that forgot it now flags the gap — the compiler keeps you honest.">
+      <p class="q-text">Add a new <code>Critical</code> case later and an exhaustive match will…</p>
+      <button class="opt">skip every gap</button>
+      <button class="opt">flag every gap</button>
+      <button class="opt">hide every gap</button>
+      <p class="q-fb" hidden></p>
+    </div>
+  </div>
+
+  <div class="primary-source">
+    <span class="label">Read next (primary source)</span>
+    <p>
+      Read the <a href="https://docs.scala-lang.org/scala3/book/control-structures.html#match-expressions">match
+      expressions</a> section of the Scala&nbsp;3 Book. It shows the same tool matching on
+      plain numbers and strings too — <code>match</code> is not just for enums, it's Scala's
+      general "look at a value and decide" expression.
+    </p>
+  </div>
+
+  <p>
+    Today's syntax (<code>match</code>, payload binding, exhaustiveness) is now in the
+    <a href="../reference/scala-syntax.html">Scala syntax quick reference</a>.
+  </p>
+
+  <div class="ask-teacher">
+    <strong>I'm your teacher — ask me anything.</strong> Curious what a <code>case _ =&gt;</code>
+    wildcard does (and why it quietly switches off the exhaustiveness check)? Or how
+    <code>match</code> can test the <em>shape</em> of nested data, not just the top case? Or
+    where a <code>MatchError</code> actually comes from? Those are the right next questions —
+    ask.
+  </div>
+
+  <nav class="lesson-nav">
+    <a href="0003-hit-or-miss-with-enum.html">← Lesson 3: Hit or Miss with enum</a>
+    <span class="disabled">Next: The first pure function →</span>
+  </nav>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reference — Scala Syntax Quick Reference</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main class="doc">
+
+  <p class="course-label">FP in Scala · Reference</p>
+  <h1>Scala syntax quick reference</h1>
+  <p class="lesson-meta">Growing as we go — the syntax we've actually met. Source: <a href="https://docs.scala-lang.org/scala3/book/introduction.html">Scala&nbsp;3 Book</a>.</p>
+
+  <h2>Bindings</h2>
+  <dl>
+    <dt><code>val x = 42</code></dt>
+    <dd><strong>Immutable</strong> binding — can't be reassigned. The FP default; reach for this first.</dd>
+
+    <dt><code>var x = 42</code></dt>
+    <dd>Mutable binding — reassignable. Avoid unless you have a specific reason.</dd>
+  </dl>
+
+  <h2>Data: the <code>case class</code></h2>
+  <dl>
+    <dt><code>case class Monster(name: String, armorClass: Int)</code></dt>
+    <dd>A <strong>product type</strong> — a bundle of named, immutable fields. The C# <code>record</code>.</dd>
+
+    <dt><code>Monster("Goblin", 15)</code></dt>
+    <dd>Construct one — <strong>no <code>new</code></strong> needed.</dd>
+
+    <dt><code>goblin.name</code> · <code>goblin.armorClass</code></dt>
+    <dd>Read a field. They're <code>val</code>s, so read-only.</dd>
+
+    <dt><code>goblin.copy(armorClass = 17)</code></dt>
+    <dd>Derive a <strong>new</strong> value with some fields changed; the original is untouched.</dd>
+
+    <dt><code>a == b</code></dt>
+    <dd><strong>Value equality</strong> — two case-class values are equal when their fields match.</dd>
+  </dl>
+
+  <h2>Choices: the <code>enum</code> (sum type / ADT)</h2>
+  <dl>
+    <dt><code>enum AttackResult:</code><br><code>&nbsp;&nbsp;case Hit(damage: Int)</code><br><code>&nbsp;&nbsp;case Miss</code></dt>
+    <dd>A <strong>sum type</strong> — a value is <em>one of</em> a fixed set of cases
+        (Hit <em>or</em> Miss). The "OR" counterpart to a case class's "AND".</dd>
+
+    <dt><code>AttackResult.Hit(6)</code> · <code>AttackResult.Miss</code></dt>
+    <dd>Construct a case by name. Cases can <strong>carry data</strong>
+        (<code>Hit</code> holds an <code>Int</code>) — unlike a C# enum. This is a
+        discriminated union.</dd>
+  </dl>
+  <p style="font-size:0.9rem;color:var(--ink-soft);margin:-0.4rem 0 1rem;">
+    Case class + enum together = <strong>algebraic data types (ADTs)</strong>: products
+    (AND) and sums (OR), nested to model any domain.
+  </p>
+
+  <h2>Pattern matching: <code>match</code></h2>
+  <dl>
+    <dt><code>x match</code><br><code>&nbsp;&nbsp;case Hit(dmg) =&gt; s"hit for $dmg"</code><br><code>&nbsp;&nbsp;case Miss&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=&gt; "miss"</code></dt>
+    <dd>Look at a value, pick the first matching <strong>case</strong>, produce its result.
+        It's an <strong>expression</strong> — the whole <code>match</code> evaluates <em>to</em>
+        a value (like C#'s <code>switch</code> expression), so you can return it or assign it.</dd>
+
+    <dt><code>case Hit(dmg) =&gt; …</code></dt>
+    <dd><strong>Binds the payload</strong>: <code>dmg</code> is a fresh <code>val</code> holding
+        the data inside that case, usable on the right of <code>=&gt;</code>. This is how you
+        read a case's data.</dd>
+
+    <dt>Exhaustiveness</dt>
+    <dd>Match on an <code>enum</code> (a fixed set of cases) and forget one → the compiler
+        <strong>warns at compile time</strong> (<em>"match may not be exhaustive"</em>). A case
+        that slips through at runtime throws a <code>MatchError</code>.</dd>
+  </dl>
+
+  <h2>Collections</h2>
+  <dl>
+    <dt><code>List(a, b, c)</code></dt>
+    <dd><strong>Immutable</strong>, ordered sequence — the FP default. "Adding" returns a
+        <em>new</em> list; the original is untouched. Singly-linked: cheap prepend and
+        head/tail traversal, slow random access.</dd>
+
+    <dt><code>x +: list</code> · <code>list :+ x</code></dt>
+    <dd>Prepend / append. Each returns a <strong>new</strong> list — never mutates.</dd>
+
+    <dt><code>Vector(a, b, c)</code></dt>
+    <dd>Also immutable, but <em>indexed</em> — reach for it over <code>List</code> when you
+        need fast random access.</dd>
+
+    <dt><code>Array(a, b, c)</code></dt>
+    <dd><strong>Mutable</strong> and fixed-size — <code>arr(0) = x</code> rewrites a slot in
+        place. A thin wrapper over a JVM array; use only for performance or Java interop,
+        not everyday domain data.</dd>
+
+    <dt><code>xs.find(m =&gt; m.name == "Orc")</code></dt>
+    <dd>First element matching a predicate. Returns an <code>Option</code>: <code>Some(x)</code> or <code>None</code>.</dd>
+  </dl>
+
+  <h2>Functions: <code>def</code></h2>
+  <dl>
+    <dt><code>def narrate(result: AttackResult): String = …</code></dt>
+    <dd>Declare a function with <code>def</code>. Anatomy:
+        <code>def</code> <em>keyword</em> · <code>narrate</code> <em>name</em> ·
+        <code>(result: AttackResult)</code> <em>params, written <code>name: Type</code></em> ·
+        <code>: String</code> <em>return type</em> · <code>= …</code> <em>body</em>.</dd>
+
+    <dt>vs C#: <code>public String Narrate(AttackResult result)</code></dt>
+    <dd>Three flips from .NET: the <strong>return type comes after</strong> the params
+        (<code>): String</code>), params are <strong><code>name: Type</code></strong>
+        (inverse of C#'s <code>Type name</code>), and there's an <strong><code>=</code></strong>
+        before the body — a function is defined <em>equal to</em> an expression.</dd>
+
+    <dt><code>= expression</code> (the body)</dt>
+    <dd>The body is an expression whose value <em>is</em> the return value — no
+        <code>return</code> needed. (A <code>match</code>, being an expression, drops
+        straight in as a body.)</dd>
+
+    <dt>Visibility</dt>
+    <dd><strong>Public by default</strong> — no keyword. Add <code>private</code> /
+        <code>protected</code> only to restrict. (So <code>def narrate</code> is public.)</dd>
+
+    <dt><code>r =&gt; println(r)</code></dt>
+    <dd>A function <strong>value</strong> (anonymous / "lambda") — a function used as data,
+        e.g. passed to <code>foreach</code> or <code>find</code>. Two senses of "function":
+        a named <code>def</code>, and a value like this you can pass around.</dd>
+  </dl>
+
+  <h2>Programs &amp; strings</h2>
+  <dl>
+    <dt><code>@main def run() = ...</code></dt>
+    <dd>Marks the program entry point (like C#'s <code>static void Main</code>).</dd>
+
+    <dt><code>s"Hello, ${who}!"</code></dt>
+    <dd>Interpolated string — like C#'s <code>$"Hello, {who}!"</code>.</dd>
+
+    <dt>Indentation</dt>
+    <dd>Scala&nbsp;3 uses indentation for blocks — usually no braces needed.</dd>
+  </dl>
+
+  <div class="callout">
+    <span class="label">How to use this</span>
+    <p>
+      This page is for quick recall, not learning. If an entry is fuzzy, revisit the
+      lesson that introduced it — or just ask your teacher.
+    </p>
+  </div>
+
+  <nav class="lesson-nav">
+    <a href="../lessons/0004-pattern-matching-on-outcomes.html">← Lesson 4: Pattern matching on outcomes</a>
+    <span class="disabled"></span>
+  </nav>
+
+</main>
+</body>
+</html>

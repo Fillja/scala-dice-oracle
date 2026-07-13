@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reference — Scala CLI Quick Reference</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main class="doc">
+
+  <p class="course-label">FP in Scala · Reference</p>
+  <h1>Scala CLI quick reference</h1>
+  <p class="lesson-meta">The handful of commands you'll actually use. Source: <a href="https://scala-cli.virtuslab.org/docs/overview/">Scala CLI docs</a>.</p>
+
+  <h2>Everyday commands</h2>
+  <dl>
+    <dt><code>scala-cli run hello.scala</code></dt>
+    <dd>Compile and run a file (or a whole folder: <code>scala-cli run .</code>).</dd>
+
+    <dt><code>scala-cli repl</code></dt>
+    <dd>Open an interactive prompt — great for trying a snippet and seeing its type. Exit with <code>:quit</code>.</dd>
+
+    <dt><code>scala-cli test .</code></dt>
+    <dd>Run tests in the current directory (once we add any).</dd>
+
+    <dt><code>scala-cli compile .</code></dt>
+    <dd>Type-check and compile without running. Fast way to catch errors.</dd>
+
+    <dt><code>scala-cli fmt .</code></dt>
+    <dd>Auto-format your code to the standard style.</dd>
+
+    <dt><code>scala-cli setup-ide .</code></dt>
+    <dd>Generate the <code>.bsp</code> config so IntelliJ (or VSCode + Metals) can import the project.</dd>
+
+    <dt><code>scala-cli version</code></dt>
+    <dd>Print the installed version — the quickest "is it installed?" check.</dd>
+  </dl>
+
+  <h2>Handy flags</h2>
+  <dl>
+    <dt><code>--watch</code> (or <code>-w</code>)</dt>
+    <dd>Re-run automatically on every save, e.g. <code>scala-cli run . -w</code>. A tight feedback loop while learning.</dd>
+
+    <dt><code>--scala 3.x.y</code></dt>
+    <dd>Pin a specific Scala version if you ever need to.</dd>
+  </dl>
+
+  <div class="callout">
+    <span class="label">Mental model</span>
+    <p>
+      One tool wraps the JVM + compiler + formatter + test runner. When you outgrow
+      single-folder projects (much later), the same concepts map onto build tools —
+      but you won't need one for this course.
+    </p>
+  </div>
+
+  <nav class="lesson-nav">
+    <a href="../lessons/0001-setup.html">← Lesson 1: Setup</a>
+    <span class="disabled"></span>
+  </nav>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 3 — Hit or Miss: Modelling a Choice with enum</title>
+  <link rel="stylesheet" href="../assets/course.css">
+  <script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+<main class="lesson">
+
+  <p class="course-label">FP in Scala · Lesson 3</p>
+  <h1>Hit or Miss: modelling a choice with <code>enum</code></h1>
+  <p class="lesson-meta">From “A <em>and</em> B” to “A <em>or</em> B”. One <code>enum</code>. ~20&nbsp;minutes.</p>
+
+  <p>
+    Last lesson you modelled a <a href="0002-modelling-a-monster.html">Monster</a> as
+    immutable data: a <code>name</code> <strong>and</strong> an <code>armorClass</code>,
+    bundled together. That “and” makes it a <strong>product type</strong>. Today we model
+    the other half of the shape space — a <strong>choice</strong>. When the Dice Oracle
+    resolves an attack, the result is a <code>Hit</code> <strong>or</strong> a
+    <code>Miss</code>: never both, never neither. A value that is “one of a fixed set of
+    alternatives” is a <strong>sum type</strong>, and Scala spells it <code>enum</code>.
+  </p>
+
+  <div class="callout">
+    <span class="label">Product vs sum — the whole idea in one line</span>
+    <p>
+      A <strong>product</strong> type combines fields: a Monster is a name <em>and</em> a
+      number (<code>case class</code>). A <strong>sum</strong> type offers a choice: an
+      outcome is a Hit <em>or</em> a Miss (<code>enum</code>). Almost every domain you'll
+      ever model is built by nesting these two — “ands” and “ors” — all the way down.
+      Together they're called <strong>algebraic data types</strong> (ADTs).
+      <a class="cite" href="https://docs.scala-lang.org/scala3/book/types-adts-gadts.html">[Scala 3 Book: ADTs]</a>
+    </p>
+  </div>
+
+  <h2>The tool: <code>enum</code></h2>
+
+<pre><code><span class="c-key">enum</span> AttackResult:
+  <span class="c-key">case</span> Hit(damage: Int)
+  <span class="c-key">case</span> Miss</code></pre>
+
+  <p>
+    Read it literally: an <code>AttackResult</code> is <em>either</em> a <code>Hit</code>
+    (which remembers how much <code>damage</code> it dealt) <em>or</em> a <code>Miss</code>
+    (which carries nothing — a miss is just a miss). You build each case by name:
+  </p>
+
+<pre><code><span class="c-key">val</span> crit  = AttackResult.Hit(<span class="c-lit">6</span>)
+<span class="c-key">val</span> whiff = AttackResult.Miss</code></pre>
+
+  <h2>This is <em>not</em> a C# enum</h2>
+
+  <p>
+    The keyword is the same, so here's the trap to avoid. A C# <code>enum</code> is just a
+    set of named integers — <code>Hit</code> and <code>Miss</code> would secretly be
+    <code>0</code> and <code>1</code>, and neither could hold any data:
+  </p>
+
+<pre><code><span class="c-com">// C#: enum AttackResult { Hit, Miss }   — just named ints, no payload</span></code></pre>
+
+  <p>
+    A Scala <code>enum</code> case can <strong>carry its own data</strong> — that's why
+    <code>Hit(damage: Int)</code> works and <code>Miss</code> doesn't need to. That makes
+    it a <strong>discriminated union</strong>: the feature you may know from F# or
+    TypeScript, and the one C# still lacks natively. If you've ever reached for a clumsy
+    <code>enum</code>&nbsp;+&nbsp;<code>switch</code>&nbsp;+&nbsp;a-bag-of-nullable-fields
+    to fake “a hit has damage but a miss doesn't,” this is the clean tool you were missing.
+    <a class="cite" href="https://docs.scala-lang.org/scala3/book/domain-modeling-tools.html">[Scala 3 Book: Enums]</a>
+  </p>
+
+  <h2>Why sum types matter</h2>
+
+  <div class="callout win">
+    <span class="label">Make illegal states unrepresentable</span>
+    <p>
+      Because an <code>AttackResult</code> is <em>exactly one</em> case, you literally
+      cannot construct a nonsensical “a hit that also missed,” or “an outcome that's
+      neither.” In the mutable-flags world you might model this as
+      <code>bool WasHit</code> plus <code>int? Damage</code> — and then have to hope every
+      code path keeps them consistent. A sum type deletes that whole class of bug by
+      construction: the impossible states simply have no way to exist.
+    </p>
+  </div>
+
+  <p>
+    There's a second payoff you'll cash in <em>next</em> lesson: because the compiler knows
+    the complete, finite list of cases, it can <strong>check that you've handled every
+    one</strong> when you branch on a result. Model the choice precisely today, and the
+    compiler becomes your safety net tomorrow.
+  </p>
+
+  <h2>Do it: a combat log</h2>
+
+  <div class="step">
+    <span class="step-num">1</span>
+    <h3>Create the file</h3>
+    <p>Make <code>attacks.scala</code> with this:</p>
+<pre><code><span class="c-key">enum</span> AttackResult:
+  <span class="c-key">case</span> Hit(damage: Int)
+  <span class="c-key">case</span> Miss
+
+<span class="c-key">@main</span> <span class="c-key">def</span> combat() =
+  <span class="c-key">val</span> log = List(
+    AttackResult.Hit(<span class="c-lit">6</span>),
+    AttackResult.Miss,
+    AttackResult.Hit(<span class="c-lit">3</span>)
+  )
+  println(log)</code></pre>
+  </div>
+
+  <div class="step">
+    <span class="step-num">2</span>
+    <h3>Run it</h3>
+    <pre><code>scala-cli run attacks.scala</code></pre>
+    <p>You should see the whole log print, each case showing its data (or lack of it):</p>
+    <pre><code>List(Hit(6), Miss, Hit(3))</code></pre>
+    <p>
+      Notice a <code>List</code> can hold a mix of <code>Hit</code>s and <code>Miss</code>es
+      happily — they're all <code>AttackResult</code>s. And, just like a case class, each
+      case prints its values instead of a memory address.
+    </p>
+  </div>
+
+  <div class="step">
+    <span class="step-num">3</span>
+    <h3>Your turn (the win)</h3>
+    <p>Extend the model — this is the move you'll make constantly in FP:</p>
+    <ul>
+      <li>Add a third case to the enum: <code>case Critical(damage: Int)</code> — a critical hit.</li>
+      <li>Add a <code>Critical(12)</code> to your combat <code>log</code> and re-run.</li>
+    </ul>
+    <p>
+      It just works, and the printout grows to include <code>Critical(12)</code>. Pause on
+      how cheap that was: one line to add a whole new outcome to your domain, and every
+      existing <code>AttackResult</code> value is still valid.
+    </p>
+    <div class="callout win">
+      <span class="label">Milestone</span>
+      <p>
+        You've modelled a <em>choice</em> as data — the second of the two building blocks
+        (product + sum) that every domain model is made from. The Dice Oracle now has both
+        a monster to hit and a way to say whether the hit landed.
+      </p>
+    </div>
+  </div>
+
+  <h2>Check yourself</h2>
+
+  <div class="quiz">
+    <span class="quiz-label">Retrieval practice</span>
+    <p class="quiz-intro">
+      Pull these from memory — no scrolling up. Wrong answers just invite another try.
+    </p>
+
+    <div class="q" data-answer="0"
+         data-explain="An enum is a sum type: a value is one of a fixed set of alternatives (OR).">
+      <p class="q-text">A <code>case class</code> is a product type (AND). An <code>enum</code> is a…</p>
+      <button class="opt">sum type (OR)</button>
+      <button class="opt">list type (MANY)</button>
+      <button class="opt">null type (NONE)</button>
+      <p class="q-fb" hidden></p>
+    </div>
+
+    <div class="q" data-answer="2"
+         data-explain="Scala enum cases take parameters — Hit(damage) — so it's a discriminated union.">
+      <p class="q-text">Unlike a C# enum, a Scala <code>enum</code> case can…</p>
+      <button class="opt">hold only a name</button>
+      <button class="opt">run its own code</button>
+      <button class="opt">carry its own data</button>
+      <p class="q-fb" hidden></p>
+    </div>
+
+    <div class="q" data-answer="1"
+         data-explain="A sum-type value is exactly one case — never both, never neither. Illegal states can't be built.">
+      <p class="q-text">Modelling an outcome as Hit-or-Miss means a value is…</p>
+      <button class="opt">possibly both of them</button>
+      <button class="opt">exactly one of them</button>
+      <button class="opt">possibly none at all</button>
+      <p class="q-fb" hidden></p>
+    </div>
+
+    <div class="q" data-answer="0"
+         data-explain="A fixed, finite set of cases lets the compiler check you've handled them all — exhaustiveness, next lesson.">
+      <p class="q-text">A fixed, known set of cases lets the compiler later…</p>
+      <button class="opt">check every case</button>
+      <button class="opt">merge every case</button>
+      <button class="opt">hide every case</button>
+      <p class="q-fb" hidden></p>
+    </div>
+  </div>
+
+  <div class="primary-source">
+    <span class="label">Read next (primary source)</span>
+    <p>
+      Read <a href="https://docs.scala-lang.org/scala3/book/types-adts-gadts.html">Algebraic
+      Data Types</a> in the Scala&nbsp;3 Book. It's short, and it shows a lovely thing:
+      Scala's own <code>Option</code> — the <code>Some(...)</code>/<code>None</code> you met
+      in Lesson&nbsp;2 — is <em>just an <code>enum</code></em> (<code>case Some(x)</code> /
+      <code>case None</code>). Same tool you learned today, all the way down.
+    </p>
+  </div>
+
+  <p>
+    Today's syntax (<code>enum</code>, data-carrying cases) is now in the
+    <a href="../reference/scala-syntax.html">Scala syntax quick reference</a>.
+  </p>
+
+  <div class="ask-teacher">
+    <strong>I'm your teacher — ask me anything.</strong> Wondering why they're called
+    “product” and “sum” types (there's a genuinely neat maths reason)? Or how this compares
+    to a C# class hierarchy with subclasses? Or when you'd choose an <code>enum</code> over a
+    <code>sealed</code> hierarchy? Ask away — those are exactly the right questions.
+  </div>
+
+  <nav class="lesson-nav">
+    <a href="0002-modelling-a-monster.html">← Lesson 2: Modelling a monster</a>
+    <a href="0004-pattern-matching-on-outcomes.html">Next: Pattern matching on outcomes →</a>
+  </nav>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 2 — Modelling a Monster with Immutable Data</title>
+  <link rel="stylesheet" href="../assets/course.css">
+  <script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+<main class="lesson">
+
+  <p class="course-label">FP in Scala · Lesson 2</p>
+  <h1>Modelling a monster with immutable data</h1>
+  <p class="lesson-meta">Your first brick of the game domain. One <code>case class</code>. ~20&nbsp;minutes.</p>
+
+  <p>
+    Our <a href="../MISSION.md">mission</a> is a Dice Oracle that resolves attacks
+    against monsters. Before any dice roll, we need a <strong>monster</strong> to
+    attack. Today we model one — and we do it the functional way: as
+    <strong>immutable data</strong>. This is the single most important habit to
+    build first, because every later lesson (attack resolution, the network
+    protocol) rests on it.
+  </p>
+
+  <h2>The tool: <code>case class</code></h2>
+
+  <p>
+    A <strong>case class</strong> is Scala's way to say “this is a small bundle of
+    data.” Think of the C# classes you already write — but with the functional
+    defaults flipped on: <strong>no setters</strong>, and equality compared
+    <em>by value</em> instead of by reference. (That's exactly what a C#
+    <code>record</code> gives you; but if you've mostly written mutable
+    <code>{&nbsp;get;&nbsp;set;&nbsp;}</code> classes for EF, the setter-free part is
+    the real shift.)
+  </p>
+
+<pre><code><span class="c-com">// Scala 3</span>
+<span class="c-key">case class</span> Monster(name: String, armorClass: Int)
+
+<span class="c-com">// The mutable C# class you'd write today:</span>
+<span class="c-com">//   public class Monster { public string Name { get; set; } ... }</span>
+<span class="c-com">// The case class above is that — minus the setters, plus value equality.</span></code></pre>
+
+  <p>
+    That one line is a <em>product type</em>: a <code>Monster</code> is a
+    <code>name</code> <strong>and</strong> an <code>armorClass</code>, bundled
+    together. From it, the compiler generates a surprising amount for free
+    <a class="cite" href="https://docs.scala-lang.org/scala3/book/domain-modeling-tools.html">[Scala 3 Book: Domain Modeling Tools]</a>:
+  </p>
+
+  <ul>
+    <li>A constructor you call <strong>without <code>new</code></strong>:
+        <code>Monster("Goblin", 15)</code>.</li>
+    <li>Public fields that are <strong>immutable</strong> —
+        they're <code>val</code>s, so <code>name</code> and <code>armorClass</code>
+        can never be reassigned.</li>
+    <li><strong>Value equality</strong>: two monsters with the same fields are
+        <code>==</code>. (A C# <code>class</code> would compare by reference; a
+        <code>record</code> compares by value, just like this.)</li>
+    <li>A readable <code>toString</code> — printing one shows
+        <code>Monster(Goblin,15)</code>, not a memory address.</li>
+    <li>A <code>copy</code> method to derive a <em>changed</em> version without
+        mutating the original. More on this below.</li>
+  </ul>
+
+  <h2>Why immutable? (the part that matters)</h2>
+
+  <p>
+    Coming from C#, your instinct — honed on <code>{&nbsp;get;&nbsp;set;&nbsp;}</code>
+    classes — is probably: “fine, but why can't I just <em>set</em>
+    <code>armorClass</code> later?” Here's the payoff, and it's the heart of FP.
+  </p>
+
+  <div class="callout">
+    <span class="label">Immutable = no spooky action at a distance</span>
+    <p>
+      A setter is a handle for changing an object <em>after</em> you've handed it out.
+      Pass the same mutable <code>Monster</code> to two parts of your program and either
+      one can call that setter — leaving the other silently surprised. That's
+      <em>aliasing</em>, and it's a classic source of bugs. A case class simply has
+      <strong>no setter</strong>: once built, a <code>Monster</code> can never change,
+      so you can share it freely — across functions, threads, or (soon) both ends of
+      our network protocol — knowing nobody can mutate it out from under you.
+      <a class="cite" href="https://docs.scala-lang.org/scala3/book/taste-vars-data-types.html">[Scala 3 Book: val is immutable]</a>
+    </p>
+  </div>
+
+  <div class="callout">
+    <span class="label">One place mutability still earns its keep</span>
+    <p>
+      Your EF entities are mutable <em>on purpose</em>: change-tracking needs those
+      setters to diff your object and generate the <code>UPDATE</code>. That's the one
+      layer where mutable classes are the right call — and it's fine. But notice what
+      we're modelling here: a monster, an attack outcome, a message on the wire. That's
+      the <em>value</em> world (your DTOs and view models), not the change-tracked-entity
+      world — and it's exactly where immutable data shines.
+    </p>
+  </div>
+
+  <p>
+    There's a second, subtler win. Because a <code>Monster</code> value is frozen,
+    <code>Monster("Orc", 13)</code> <em>means</em> exactly “an Orc with AC 13” — nothing
+    more, nothing hidden, no history of who mutated it. A function that takes a
+    <code>Monster</code> and returns something will give the <strong>same answer every
+    time</strong> for the same monster. That property — same input, same output, no
+    surprises — is called <strong>referential transparency</strong>, and it's the reason
+    functional code is so easy to reason about and test. We'll lean on it hard when
+    we write the attack-resolution logic.
+  </p>
+
+  <div class="callout win">
+    <span class="label">The mental flip</span>
+    <p>
+      OOP asks “what can this object <em>do</em>, and how does its state change over
+      time?” FP asks “what <em>is</em> this value, right now, forever?” A
+      <code>case class</code> is a value, not a mutable thing. Hold that thought — it's
+      the whole shift.
+    </p>
+  </div>
+
+  <h2>Changing without mutating: <code>copy</code></h2>
+
+  <p>
+    “Frozen forever” sounds impractical until you meet <code>copy</code>. You don't
+    change a monster — you <strong>derive a new one</strong> and leave the original
+    untouched:
+  </p>
+
+<pre><code><span class="c-key">val</span> goblin  = Monster(<span class="c-str">"Goblin"</span>, <span class="c-lit">15</span>)
+<span class="c-key">val</span> armored = goblin.copy(armorClass = <span class="c-lit">17</span>)
+
+<span class="c-com">// goblin  is still Monster(Goblin,15)  — unchanged</span>
+<span class="c-com">// armored is       Monster(Goblin,17)  — a brand-new value</span></code></pre>
+
+  <p>
+    Where you'd reach for a setter, you reach for <code>copy</code> instead. (It's the
+    same idea as a C# <code>record</code>'s <code>goblin with { ArmorClass = 17 }</code>
+    — a <code>with</code>-expression, not an assignment.) The old value survives; you
+    just made a new one alongside it.
+  </p>
+
+  <h2>Do it: build the roster</h2>
+
+  <div class="step">
+    <span class="step-num">1</span>
+    <h3>Create the file</h3>
+    <p>
+      In your project folder, make <code>monsters.scala</code> with this:
+    </p>
+<pre><code><span class="c-key">case class</span> Monster(name: String, armorClass: Int)
+
+<span class="c-key">@main</span> <span class="c-key">def</span> roster() =
+  <span class="c-key">val</span> monsters = List(
+    Monster(<span class="c-str">"Goblin"</span>, <span class="c-lit">15</span>),
+    Monster(<span class="c-str">"Orc"</span>,    <span class="c-lit">13</span>),
+    Monster(<span class="c-str">"Dragon"</span>, <span class="c-lit">18</span>)
+  )
+
+  <span class="c-com">// Look one up by name.</span>
+  <span class="c-key">val</span> found = monsters.find(m => m.name == <span class="c-str">"Orc"</span>)
+  println(found)</code></pre>
+  </div>
+
+  <div class="step">
+    <span class="step-num">2</span>
+    <h3>Run it</h3>
+    <pre><code>scala-cli run monsters.scala</code></pre>
+    <p>You should see:</p>
+    <pre><code>Some(Monster(Orc,13))</code></pre>
+    <div class="callout">
+      <span class="label">What's that <code>Some(...)</code>?</span>
+      <p>
+        <code>find</code> can't promise a match exists, so it returns an
+        <strong><code>Option</code></strong> — <code>Some(monster)</code> if found,
+        <code>None</code> if not. That's Scala being <em>honest</em> about “maybe
+        nothing” instead of handing you a <code>null</code>. Don't worry about
+        unwrapping it yet — <code>Option</code> gets its own lesson soon. For now, just
+        notice the wrapper.
+      </p>
+    </div>
+  </div>
+
+  <div class="step">
+    <span class="step-num">3</span>
+    <h3>Your turn (the win)</h3>
+    <p>Make two small changes and re-run:</p>
+    <ul>
+      <li>Add a <strong>fourth monster</strong> — a <code>Skeleton</code> with armor
+          class <code>13</code> — to the list.</li>
+      <li>Change the lookup to find your <code>Skeleton</code> instead of the Orc.</li>
+    </ul>
+    <p>
+      Then, as a one-line experiment, add this and run again:
+    </p>
+<pre><code>println(Monster(<span class="c-str">"Orc"</span>, <span class="c-lit">13</span>) == Monster(<span class="c-str">"Orc"</span>, <span class="c-lit">13</span>))</code></pre>
+    <p>
+      It prints <code>true</code> — two separately-built monsters are equal because
+      their <em>values</em> match. That's value equality, for free, and it's exactly
+      what makes monsters easy to compare and test.
+    </p>
+    <div class="callout win">
+      <span class="label">Milestone</span>
+      <p>
+        You've modelled a piece of the game domain as immutable data, built a roster,
+        and looked a monster up by name. This is the functional core taking shape.
+      </p>
+    </div>
+  </div>
+
+  <h2>Check yourself</h2>
+
+  <div class="quiz">
+    <span class="quiz-label">Retrieval practice</span>
+    <p class="quiz-intro">
+      No peeking above — pull these from memory. Wrong answers just invite another try.
+    </p>
+
+    <div class="q" data-answer="0"
+         data-explain="case-class fields are vals — immutable, never reassigned.">
+      <p class="q-text">In <code>case class Monster(name, armorClass)</code>, the fields are…</p>
+      <button class="opt">immutable vals</button>
+      <button class="opt">reassignable vars</button>
+      <button class="opt">private fields</button>
+      <p class="q-fb" hidden></p>
+    </div>
+
+    <div class="q" data-answer="2"
+         data-explain="You never mutate; copy derives a new value and leaves the original intact.">
+      <p class="q-text">To get a Goblin with a different armour class, you…</p>
+      <button class="opt">set the field</button>
+      <button class="opt">mutate the value</button>
+      <button class="opt">copy with changes</button>
+      <p class="q-fb" hidden></p>
+    </div>
+
+    <div class="q" data-answer="1"
+         data-explain="A frozen value can't change, so nothing can surprise a sharer — no aliasing bugs.">
+      <p class="q-text">Sharing an immutable Monster across the program is safe because…</p>
+      <button class="opt">it locks itself</button>
+      <button class="opt">nothing can change</button>
+      <button class="opt">it copies itself</button>
+      <p class="q-fb" hidden></p>
+    </div>
+
+    <div class="q" data-answer="1"
+         data-explain="Same fields ⇒ equal by value, generated automatically by case class.">
+      <p class="q-text">Two <code>Monster("Orc", 13)</code> compared with <code>==</code> are…</p>
+      <button class="opt">unequal by reference</button>
+      <button class="opt">equal by their values</button>
+      <button class="opt">equal only sometimes</button>
+      <p class="q-fb" hidden></p>
+    </div>
+  </div>
+
+  <div class="primary-source">
+    <span class="label">Read next (primary source)</span>
+    <p>
+      Read the <strong>Case Classes</strong> section of
+      <a href="https://docs.scala-lang.org/scala3/book/domain-modeling-tools.html">Domain Modeling Tools</a>
+      in the Scala&nbsp;3 Book — it's short, and it lists everything a case class
+      generates for you, with examples. That's the canonical source behind this lesson.
+    </p>
+  </div>
+
+  <p>
+    New syntax from today lives in the growing
+    <a href="../reference/scala-syntax.html">Scala syntax quick reference</a>
+    (<code>case class</code>, <code>val</code>/<code>var</code>, <code>.copy</code>,
+    <code>List</code>, <code>.find</code>).
+  </p>
+
+  <div class="ask-teacher">
+    <strong>I'm your teacher — ask me anything.</strong> Curious why <code>List</code>
+    and not an array? Wondering how <code>Option</code> really works, or what a “product
+    type” has to do with multiplication? Those are great questions — ask, and we'll dig
+    in when it fits the path.
+  </div>
+
+  <nav class="lesson-nav">
+    <a href="0001-setup.html">← Lesson 1: Setup</a>
+    <a href="0003-hit-or-miss-with-enum.html">Next: Hit or Miss with an enum →</a>
+  </nav>
+
+</main>
+</body>
+</html>
